@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduTrack SMS - Student Performance Prediction</title>
+  <style>
+    /* ============================================================
+       DESIGN TOKENS
+       Colours are approximated from the Figma screenshot.
+       ============================================================ */
+    :root {
+      --primary: #2446d6;
+      --primary-dark: #1b36a8;
+      --primary-soft: #e8edff;
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --border: #e3e7f0;
+      --text: #1b2540;
+      --muted: #6b7591;
+      --success: #12a35a;
+      --success-soft: #e3f8ec;
+      --warning: #d98a00;
+      --warning-soft: #fff4dc;
+      --danger: #d93a3a;
+      --danger-soft: #fde8e8;
+      --excellent: #12a35a;
+      --good: #2446d6;
+      --average: #d98a00;
+      --risk: #d93a3a;
+      --radius: 10px;
+      --shadow: 0 1px 3px rgba(20, 30, 70, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    a { color: var(--primary); text-decoration: none; }
+
+    .hidden { display: none !important; }
+
+    /* ============================================================
+       LOGIN PAGE
+       ============================================================ */
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: linear-gradient(135deg, #eef2ff, #f4f6fb);
+    }
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(20, 30, 70, 0.12);
+      padding: 36px 32px;
+    }
+    .login-card h1 { font-size: 22px; margin-bottom: 6px; }
+    .login-card p.sub { color: var(--muted); margin-bottom: 24px; }
+    .notice {
+      background: var(--warning-soft);
+      color: #7a5200;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      margin-top: 18px;
+    }
+
+    /* ============================================================
+       APP SHELL (sidebar + main)
+       ============================================================ */
+    .app { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 240px;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      flex-shrink: 0;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 18px 18px 10px;
+    }
+    .brand-logo {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+    }
+    .brand-name { font-weight: 700; font-size: 15px; }
+    .brand-sub { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+    .nav-label {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 14px 18px 6px;
+    }
+    .nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 18px;
+      margin: 2px 10px;
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .nav a:hover { background: var(--bg); }
+    .nav a.active { background: var(--primary); color: #fff; }
+    .nav .badge {
+      margin-left: auto;
+      font-size: 11px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      padding: 1px 8px;
+      border-radius: 10px;
+    }
+    .nav a.active .badge { background: rgba(255,255,255,0.22); color: #fff; }
+    .nav .icon { width: 16px; text-align: center; font-size: 13px; }
+
+    .sidebar-user {
+      margin-top: auto;
+      margin: auto 12px 14px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--primary-soft);
+      color: var(--primary);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .sidebar-user .name { font-weight: 600; font-size: 13px; }
+    .sidebar-user .role { font-size: 11px; color: var(--muted); }
+
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 28px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+    .crumb { color: var(--muted); font-size: 13px; }
+    .topbar .search {
+      margin-left: auto;
+      position: relative;
+      width: 300px;
+    }
+    .topbar .search input { padding-left: 34px; }
+    .topbar .search::before {
+      content: "⌕";
+      position: absolute;
+      left: 11px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+    }
+
+    .content { padding: 26px 28px 40px; }
+
+    /* ============================================================
+       COMMON COMPONENTS
+       ============================================================ */
+    .page-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .page-head h1 { font-size: 24px; }
+    .page-head p { color: var(--muted); margin-top: 4px; max-width: 640px; }
+    .page-head .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px 20px;
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .card-head h2 { font-size: 15px; }
+    .card-head p { color: var(--muted); font-size: 12.5px; }
+    .card-head .right { margin-left: auto; display: flex; gap: 8px; }
+
+    .grid { display: grid; gap: 16px; }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .stack { display: flex; flex-direction: column; gap: 16px; }
+    .mt { margin-top: 16px; }
+
+    .stat .label { color: var(--muted); font-size: 12.5px; display: flex; justify-content: space-between; align-items: center; }
+    .stat .value { font-size: 26px; font-weight: 700; margin: 6px 0 4px; }
+    .stat .hint { font-size: 11.5px; color: var(--muted); }
+    .stat .pill {
+      display: inline-block;
+      font-size: 11px;
+      padding: 1px 7px;
+      border-radius: 10px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      margin-right: 6px;
+    }
+    .stat .icon-box {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--bg); }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-small { padding: 5px 10px; font-size: 12px; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .icon-btn {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 4px 6px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .icon-btn:hover { background: var(--bg); color: var(--text); }
+
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 12.5px; font-weight: 600; color: #37415e; }
+    .field .hint { font-size: 11.5px; color: var(--muted); }
+    .field .error { font-size: 12px; color: var(--danger); min-height: 15px; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 11px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+    input.invalid { border-color: var(--danger); }
+    select { appearance: auto; }
+
+    .filters { display: flex; gap: 12px; flex-wrap: wrap; }
+    .filters .field { min-width: 160px; flex: 1; }
+
+    .pill-status {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; padding: 2px 9px; border-radius: 12px;
+      background: var(--success-soft); color: var(--success);
+    }
+    .pill-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .pill-warn { background: var(--warning-soft); color: var(--warning); }
+    .pill-danger { background: var(--danger-soft); color: var(--danger); }
+    .pill-muted { background: var(--bg); color: var(--muted); }
+    .pill-tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .tbl-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      text-align: left;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    th {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 600;
+      background: #fafbfe;
+    }
+    tbody tr:hover { background: #fafbff; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .sub-text { font-size: 11.5px; color: var(--muted); }
+    .person { display: flex; align-items: center; gap: 10px; }
+    .person .avatar { width: 32px; height: 32px; font-size: 11px; }
+    .id-link { font-weight: 600; color: var(--primary); cursor: pointer; }
+
+    .bar-track {
+      height: 8px; background: #edf0f7; border-radius: 6px; overflow: hidden; min-width: 90px;
+    }
+    .bar-fill { height: 100%; background: var(--primary); border-radius: 6px; }
+
+    .empty { text-align: center; padding: 30px; color: var(--muted); }
+
+    .toolbar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding-bottom: 12px; margin-bottom: 4px;
+    }
+    .pagination { display: flex; gap: 6px; align-items: center; justify-content: flex-end; margin-top: 14px; font-size: 13px; }
+    .page-btn { border: 1px solid var(--border); background: #fff; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+    .page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    /* Donut + bars */
+    .donut-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+    .legend-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 12px; border-radius: 8px; background: var(--bg); margin-bottom: 8px; font-size: 13px;
+    }
+    .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; }
+    .hbar-row { margin-bottom: 14px; }
+    .hbar-meta { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 5px; }
+
+    .vbars { display: flex; align-items: flex-end; gap: 10px; height: 200px; padding-top: 10px; }
+    .vbar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+    .vbar .fill { width: 100%; max-width: 46px; background: var(--primary); border-radius: 6px 6px 0 0; }
+    .vbar .lbl { font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    .vbar .val { font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+
+    .cat-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); }
+
+    /* Prediction */
+    .predict-result {
+      display: flex; gap: 18px; align-items: center; flex-wrap: wrap;
+      padding: 16px; border-radius: 10px; background: var(--primary-soft);
+    }
+    .score-big { font-size: 34px; font-weight: 700; color: var(--primary); }
+    .demo-banner {
+      background: var(--warning-soft); color: #7a5200;
+      border-radius: 8px; padding: 9px 12px; font-size: 12.5px; margin-bottom: 14px;
+    }
+    .rec-list { padding-left: 18px; color: #37415e; }
+    .rec-list li { margin-bottom: 4px; }
+
+    .status-msg { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 13px; }
+    .status-msg.ok { background: var(--success-soft); color: #0b6b3a; }
+    .status-msg.err { background: var(--danger-soft); color: #9b1c1c; }
+    .status-msg.info { background: var(--primary-soft); color: var(--primary-dark); }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+    .form-grid .full { grid-column: 1 / -1; }
+    .section-title { font-size: 13px; font-weight: 700; color: var(--primary); letter-spacing: 0.02em; margin: 4px 0 2px; }
+    .form-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(15,22,50,0.45);
+      display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50;
+    }
+    .modal { background: #fff; border-radius: 12px; padding: 22px; max-width: 460px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
+    .modal h3 { margin-bottom: 8px; }
+    .modal p { color: var(--muted); margin-bottom: 16px; }
+
+    .profile-head { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    .profile-head .avatar { width: 58px; height: 58px; font-size: 18px; }
+    .kv { display: grid; grid-template-columns: 170px 1fr; gap: 10px 14px; font-size: 13.5px; }
+    .kv div:nth-child(odd) { color: var(--muted); }
+
+    .footer-note { margin-top: 20px; color: var(--muted); font-size: 12px; }
+
+    /* ============================================================
+       RESPONSIVE
+       ============================================================ */
+    .menu-toggle { display: none; }
+
+    @media (max-width: 1100px) {
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .grid-3 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 900px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .topbar .search { display: none; }
+    }
+    @media (max-width: 760px) {
+      .app { flex-direction: column; }
+      .sidebar {
+        width: 100%; height: auto; position: static;
+        flex-direction: row; flex-wrap: wrap; align-items: center;
+        border-right: none; border-bottom: 1px solid var(--border);
+      }
+      .brand { padding: 12px; }
+      .nav { display: flex; flex-wrap: wrap; flex: 1; }
+      .nav-label { display: none; }
+      .nav a { margin: 2px; padding: 7px 10px; font-size: 13px; }
+      .sidebar-user { display: none; }
+      .content { padding: 18px 14px 30px; }
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .kv { grid-template-columns: 1fr; }
+      .page-head .actions { margin-left: 0; }
+    }
+    @media (max-width: 480px) {
+      .grid-4 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     LOGIN PAGE (Figma: "1. Login Page")
+     ============================================================ -->
+<section id="loginView" class="login-wrap">
+  <div class="login-card">
+    <div class="brand" style="padding:0 0 18px">
+      <div class="brand-logo">ET</div>
+      <div>
+        <div class="brand-name">EduTrack SMS</div>
+        <div class="brand-sub">Academic Portals</div>
+      </div>
+    </div>
+    <h1>Sign in</h1>
+    <p class="sub">Sign in with your university credentials to access registrar and departmental tools.</p>
+
+    <form id="loginForm" novalidate>
+      <div class="field" style="margin-bottom:14px">
+        <label for="loginUser">Username / Email</label>
+        <input id="loginUser" type="text" placeholder="admin@university.edu" autocomplete="username">
+        <div class="error" id="loginUserErr"></div>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="loginPass">Password</label>
+        <input id="loginPass" type="password" placeholder="Enter password" autocomplete="current-password">
+        <div class="error" id="loginPassErr"></div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)">
+        <input type="checkbox" style="width:auto"> Keep me signed in
+      </label>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:18px;padding:11px">Sign in</button>
+    </form>
+
+    <div class="notice">
+      <strong>Demo only:</strong> this login does not check credentials. It only opens the demo dashboard.
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     APP SHELL (shown after sign-in)
+     ============================================================ -->
+<div id="appView" class="app hidden">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">ET</div>
+      <div>
+        <div class="brand-name">EduTrack</div>
+        <div class="brand-sub">SMS University</div>
+      </div>
+    </div>
+    <div class="nav-label">Academic Portals</div>
+    <nav class="nav">
+      <a data-route="dashboard"><span class="icon">▦</span> Dashboard</a>
+      <a data-route="students"><span class="icon">◉</span> Students <span class="badge" id="navStudentCount">0</span></a>
+      <a data-route="add"><span class="icon">＋</span> Add Student <span class="badge">New</span></a>
+      <a data-route="attendance"><span class="icon">▣</span> Attendance</a>
+      <a data-route="marks"><span class="icon">✎</span> Marks</a>
+      <a data-route="profile"><span class="icon">◎</span> Student Profile</a>
+      <a data-route="settings"><span class="icon">⚙</span> Settings</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="avatar">DS</div>
+      <div>
+        <div class="name">Dr. Sarah Jenkins</div>
+        <div class="role">System Administrator</div>
+      </div>
+      <button class="icon-btn" id="logoutBtn" title="Sign out" style="margin-left:auto">⏻</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb" id="crumb">Home › Dashboard</div>
+      <div class="search">
+        <input id="globalSearch" type="text" placeholder="Search students by name or ID...">
+      </div>
+    </header>
+
+    <main class="content" id="content"></main>
+  </div>
+</div>
+
+<!-- Modal container -->
+<div id="modalRoot"></div>
+
+<script>
+/* ==============================================================
+   1. CONFIGURATION
+   ============================================================== */
+
+// Google Apps Script Web App URL (from your deployment).
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnkQBKXHKe_ezD9x8ONOuT50L8lUcQCVlJASqDMVZ6ZZJfDuY2Qtee3WCFOrCTS7vEtw/exec";
+
+// Performance category thresholds (predicted score, out of 100).
+// Change these numbers to adjust how students are categorised.
+const THRESHOLDS = { excellent: 85, good: 70, average: 55 };
+
+// Demo prediction weights. These are NOT a trained ML model.
+const DEMO_WEIGHTS = { internal: 0.45, assignment: 0.20, attendance: 0.25, previous: 0.10 };
+
+const DEPARTMENTS = ["MCA", "MBA", "BCA", "B.Sc", "B.Com", "M.Tech"];
+const SEMESTERS = ["Semester 1", "Semester 2", "Semester 3", "Semester 4", "Semester 5", "Semester 6"];
+const SUBJECTS = ["Data Structures", "Database Systems", "Operating Systems", "Computer Networks", "Software Engineering"];
+
+/* ==============================================================
+   2. SAMPLE DATA (demonstration only, not real student records)
+   ============================================================== */
+
+let students = [
+  { id: "MCA2026001", name: "Arun Kumar",   email: "arun@example.com",   phone: "+91 98765 11001", dept: "MCA",   course: "Master of Computer Applications", semester: "Semester 3", internal: 82, assignment: 88, attendance: 91, previous: 78 },
+  { id: "MCA2026002", name: "Priya Devi",   email: "priya@example.com",  phone: "+91 98765 11002", dept: "MCA",   course: "Master of Computer Applications", semester: "Semester 3", internal: 91, assignment: 94, attendance: 96, previous: 88 },
+  { id: "MBA2026019", name: "Rohan Verma",  email: "rohan@example.com",  phone: "+91 98765 11003", dept: "MBA",   course: "Master of Business Admin",       semester: "Semester 1", internal: 58, assignment: 62, attendance: 68, previous: 61 },
+  { id: "BCA2026042", name: "Sneha Reddy",  email: "sneha@example.com",  phone: "+91 98765 11004", dept: "BCA",   course: "Bachelor of Computer Apps",      semester: "Semester 5", internal: 74, assignment: 70, attendance: 84, previous: 72 },
+  { id: "BSC2026081", name: "Vikram Singh", email: "vikram@example.com", phone: "+91 98765 11005", dept: "B.Sc",  course: "Bachelor of Science",            semester: "Semester 3", internal: 42, assignment: 48, attendance: 55, previous: 46 },
+  { id: "BCOM2026012", name: "Kavita Nair", email: "kavita@example.com", phone: "+91 98765 11006", dept: "B.Com", course: "Bachelor of Commerce",           semester: "Semester 1", internal: 67, assignment: 73, attendance: 79, previous: 70 },
+  { id: "MTECH2026005", name: "Mohammed Farhan", email: "farhan@example.com", phone: "+91 98765 11007", dept: "M.Tech", course: "Master of Technology",       semester: "Semester 2", internal: 86, assignment: 80, attendance: 90, previous: 83 },
+  { id: "MCA2026033", name: "Divya Lakshmi", email: "divya@example.com", phone: "+91 98765 11008", dept: "MCA",   course: "Master of Computer Applications", semester: "Semester 1", internal: 77, assignment: 81, attendance: 87, previous: 75 },
+  { id: "BCA2026045", name: "Ananya Patel", email: "ananya@example.com", phone: "+91 98765 11009", dept: "BCA",   course: "Bachelor of Computer Apps",      semester: "Semester 3", internal: 63, assignment: 66, attendance: 74, previous: 65 },
+  { id: "MBA2026014", name: "Rahul Sharma", email: "rahul@example.com",  phone: "+91 98765 11010", dept: "MBA",   course: "Master of Business Admin",       semester: "Semester 2", internal: 79, assignment: 76, attendance: 82, previous: 80 }
+];
+
+// Subject marks per student (sample): studentId -> { subject: { internal, assignment, exam } }
+let marks = {};
+
+// Attendance records per student (sample): studentId -> { present, total }
+let attendanceRecords = {};
+students.forEach(s => {
+  attendanceRecords[s.id] = { present: Math.round(s.attendance * 0.6), total: 60 };
+});
+
+/* ==============================================================
+   3. HELPER FUNCTIONS
+   ============================================================== */
+
+// Escape text before putting it into HTML (protects against code injection).
+function esc(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function initials(name) {
+  return name.split(" ").map(p => p[0]).slice(0, 2).join("").toUpperCase();
+}
+
+const AVATAR_COLOURS = ["#2446d6", "#12a35a", "#d98a00", "#8a3ffc", "#d93a3a", "#0e7c86"];
+function avatarHtml(name, index = 0) {
+  const c = AVATAR_COLOURS[index % AVATAR_COLOURS.length];
+  return `<span class="avatar" style="background:${c}18;color:${c}">${esc(initials(name))}</span>`;
+}
+
+// Average of a list of numbers, rounded to 1 decimal place.
+function average(list) {
+  if (!list.length) return 0;
+  return Math.round((list.reduce((a, b) => a + b, 0) / list.length) * 10) / 10;
+}
+
+// Average of a student's subject-wise marks (internal + assignment + exam), or the basic internal score.
+function studentMarksAverage(s) {
+  const subj = marks[s.id];
+  if (!subj || !Object.keys(subj).length) return s.internal;
+  const totals = Object.values(subj).map(m => (m.internal + m.assignment + m.exam) / 3);
+  return average(totals);
+}
+
+/* ==============================================================
+   4. DEMO PREDICTION (NOT a trained Machine Learning model)
+   ============================================================== */
+
+function predictPerformance(s) {
+  const score =
+    s.internal * DEMO_WEIGHTS.internal +
+    s.assignment * DEMO_WEIGHTS.assignment +
+    s.attendance * DEMO_WEIGHTS.attendance +
+    s.previous * DEMO_WEIGHTS.previous;
+
+  const predicted = Math.round(score * 10) / 10;
+  const category = categoryFor(predicted);
+
+  // Demo confidence: higher when the input scores agree with each other.
+  const values = [s.internal, s.assignment, s.attendance, s.previous];
+  const spread = Math.max(...values) - Math.min(...values);
+  const confidence = Math.max(50, Math.min(95, Math.round(90 - spread * 0.6)));
+
+  return { predicted, category, confidence };
+}
+
+function categoryFor(score) {
+  if (score >= THRESHOLDS.excellent) return "Excellent";
+  if (score >= THRESHOLDS.good) return "Good";
+  if (score >= THRESHOLDS.average) return "Average";
+  return "At Risk";
+}
+
+function categoryPill(cat) {
+  const map = { Excellent: "pill-status", Good: "pill-tag", Average: "pill-warn", "At Risk": "pill-danger" };
+  return `<span class="${map[cat] || "pill-muted"}">${esc(cat)}</span>`;
+}
+
+function recommendationsFor(s, pred) {
+  const recs = [];
+  if (s.attendance < 75) recs.push("Attendance is below 75%. Arrange a counselling session and track weekly attendance.");
+  if (s.internal < 60) recs.push("Internal marks are low. Suggest extra tutorials for the weaker subjects.");
+  if (s.assignment < 60) recs.push("Assignment scores are low. Set up a deadline reminder and review sessions.");
+  if (pred.category === "At Risk") recs.push("Flagged as at risk. Notify the faculty advisor and schedule a review meeting.");
+  if (pred.category === "Excellent") recs.push("Strong performance. Consider mentoring or advanced electives.");
+  if (!recs.length) recs.push("Performance is stable. Continue regular monitoring each semester.");
+  return recs;
+}
+
+/* ==============================================================
+   5. GOOGLE SHEETS FORM SUBMISSION
+   Follows the required fetch rules: GET + no-cors.
+   A resolved fetch does NOT confirm the row was saved.
+   ============================================================== */
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+}
+
+function isValidPhone(phone) {
+  const digits = phone.replace(/[\s\-().]/g, "");
+  return /^\+?\d{7,15}$/.test(digits);
+}
+
+function isValidName(name) {
+  return /^[\p{L}][\p{L} .'\-]+$/u.test(name);
+}
+
+function validateContactFields(name, email, phone) {
+  const errors = {};
+  if (!name.trim()) errors.name = "Name is required.";
+  else if (!isValidName(name.trim())) errors.name = "Use letters only (spaces, dots, apostrophes and hyphens allowed).";
+
+  if (!email.trim()) errors.email = "Email is required.";
+  else if (!isValidEmail(email.trim())) errors.email = "Enter a valid email address.";
+
+  if (!phone.trim()) errors.phone = "Phone is required.";
+  else if (!isValidPhone(phone.trim())) errors.phone = "Enter 7 to 15 digits (a leading + is allowed).";
+
+  return errors;
+}
+
+function submitContactToSheet(name, email, phone, onDone) {
+  const url = SCRIPT_URL + "?" + new URLSearchParams({ name, email, phone });
+
+  fetch(url, { method: "GET", mode: "no-cors" })
+    .then(() => onDone(true))
+    .catch(() => onDone(false));
+}
+
+/* ==============================================================
+   6. CHART HELPERS (plain SVG and CSS, no libraries)
+   ============================================================== */
+
+function donutSvg(parts, centreTop, centreBottom) {
+  // parts: [{ value, colour }]
+  const total = parts.reduce((a, p) => a + p.value, 0) || 1;
+  const radius = 62, stroke = 18, circumference = 2 * Math.PI * radius;
+  let offset = 0;
+  const segments = parts.map(p => {
+    const len = (p.value / total) * circumference;
+    const seg = `<circle cx="90" cy="90" r="${radius}" fill="none" stroke="${p.colour}" stroke-width="${stroke}"
+      stroke-dasharray="${len} ${circumference - len}" stroke-dashoffset="${-offset}" transform="rotate(-90 90 90)"/>`;
+    offset += len;
+    return seg;
+  }).join("");
+
+  return `
+    <svg width="180" height="180" viewBox="0 0 180 180" role="img" aria-label="Donut chart">
+      <circle cx="90" cy="90" r="${radius}" fill="none" stroke="#edf0f7" stroke-width="${stroke}"/>
+      ${segments}
+      <text x="90" y="84" text-anchor="middle" font-size="11" fill="#6b7591" letter-spacing="1">${esc(centreTop)}</text>
+      <text x="90" y="104" text-anchor="middle" font-size="20" font-weight="700" fill="#1b2540">${esc(centreBottom)}</text>
+    </svg>`;
+}
+
+function verticalBars(items) {
+  // items: [{ label, value }] where value is 0-100
+  const max = 100;
+  return `<div class="vbars">${items.map(i => `
+      <div class="vbar" title="${esc(i.label)}: ${i.value}">
+        <div class="val">${i.value}</div>
+        <div style="width:100%;flex:1;display:flex;align-items:flex-end;justify-content:center">
+          <div class="fill" style="height:${(i.value / max) * 100}%"></div>
+        </div>
+        <div class="lbl">${esc(i.label)}</div>
+      </div>`).join("")}</div>`;
+}
+
+/* ==============================================================
+   7. PAGE RENDERERS
+   Each returns HTML. Routing happens in render().
+   ============================================================== */
+
+const PAGES = {
+  dashboard: { title: "Dashboard", crumb: "Home › Overview" },
+  students:  { title: "Students Directory", crumb: "Home › Students" },
+  add:       { title: "Add Student", crumb: "Home › Add Student" },
+  attendance:{ title: "Attendance", crumb: "Home › Attendance" },
+  marks:     { title: "Marks", crumb: "Home › Marks" },
+  profile:   { title: "Student Profile", crumb: "Home › Students › Profile" },
+  settings:  { title: "Settings", crumb: "Home › Settings" }
+};
+
+/* ---------- Dashboard ---------- */
+function renderDashboard() {
+  const avgMarks = average(students.map(studentMarksAverage));
+  const avgAtt = average(students.map(s => s.attendance));
+  const preds = students.map(s => ({ s, p: predictPerformance(s) }));
+  const passCount = preds.filter(x => x.p.predicted >= THRESHOLDS.average).length;
+  const passPct = Math.round((passCount / students.length) * 100);
+  const atRisk = preds.filter(x => x.p.category === "At Risk").length;
+
+  const male = Math.round(students.length * 0.55);
+  const female = students.length - male;
+  const genderPct = Math.round((male / students.length) * 100);
+
+  const deptCounts = DEPARTMENTS.map(d => ({ dept: d, count: students.filter(s => s.dept === d).length }))
+    .filter(d => d.count > 0);
+  const maxDept = Math.max(...deptCounts.map(d => d.count), 1);
+
+  const recent = students.slice(0, 5);
+
+  return `
+    <div class="page-head">
+      <div>
+        <h1>Dashboard</h1>
+        <p>Welcome back, Administrator. Here's an overview of your student management system.</p>
+      </div>
+      <div class="actions">
+        <button class="btn" data-action="export-report">⭳ Export Reports</button>
+        <a class="btn" href="#/attendance">▣ Take Attendance</a>
+        <a class="btn btn-primary" href="#/add">＋ Add Student</a>
+      </div>
+    </div>
+
+    <div class="grid grid-4">
+      ${statCard("Total Students", students.length, "", "Enrolled in sample data", "")}
+      ${statCard("Average Marks", avgMarks + "%", "Mean of subject averages", "Target 70%", "")}
+      ${statCard("Attendance", avgAtt + "%", "Average attendance", "Target 75%", "")}
+      ${statCard("Pass Percentage", passPct + "%", passCount + " of " + students.length + " passing", "Demo", "")}
+    </div>
+
+    <div class="grid grid-2 mt">
+      <div class="card">
+        <div class="card-head">
+          <div><h2>Student Distribution by Gender</h2><p>Sample cohort representation</p></div>
+        </div>
+        <div class="donut-wrap">
+          ${donutSvg([{ value: male, colour: "#2446d6" }, { value: female, colour: "#7b8cff" }], "TOTAL", students.length + " Students")}
+          <div style="flex:1;min-width:200px">
+            <div class="legend-row"><span><span class="dot" style="background:#2446d6"></span>Male Students</span><span>${male} · ${genderPct}%</span></div>
+            <div class="legend-row"><span><span class="dot" style="background:#7b8cff"></span>Female Students</span><span>${female} · ${100 - genderPct}%</span></div>
+            <p class="sub-text">Sample ratio for demonstration only.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div><h2>Department-wise Students</h2><p>Headcount across academic programmes</p></div>
+        </div>
+        ${deptCounts.map(d => `
+          <div class="hbar-row">
+            <div class="hbar-meta"><span><span class="pill-tag">${esc(d.dept)}</span></span><span>${d.count} students</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${(d.count / maxDept) * 100}%"></div></div>
+          </div>`).join("")}
+      </div>
+    </div>
+
+    <div class="card mt">
+      <div class="card-head">
+        <div><h2>Recently Added Students</h2><p>Latest records in the sample dataset</p></div>
+        <div class="right"><a href="#/students">View All ›</a></div>
+      </div>
+      ${studentsTable(recent, { compact: true })}
+    </div>
+
+    <div class="card mt">
+      <div class="card-head">
+        <div><h2>Academic Risk Summary</h2><p>Based on the demo prediction</p></div>
+      </div>
+      <div class="grid grid-3">
+        ${statCard("At Risk Students", atRisk, "", "Below " + THRESHOLDS.average, "")}
+        ${statCard("Total Enrolled", students.length, "", "Sample records", "")}
+        ${statCard("Review Flagged", atRisk, "", "Needs follow-up", "")}
+      </div>
+    </div>
+
+    <p class="footer-note">Prediction values on this page are demo outputs, not results from a trained Machine Learning model.</p>
+  `;
+}
+
+function statCard(label, value, pill, hint, icon) {
+  return `
+    <div class="card stat">
+      <div class="label"><span>${esc(label)}</span><span class="icon-box">${icon || "◎"}</span></div>
+      <div class="value">${esc(value)}</div>
+      <div class="hint">${pill ? `<span class="pill">${esc(pill)}</span>` : ""}${esc(hint)}</div>
+    </div>`;
+}
+
+/* ---------- Students directory ---------- */
+let directoryState = { query: "", dept: "", semester: "", category: "", page: 1, perPage: 6 };
+
+function renderStudents() {
+  const filtered = filterStudents();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / directoryState.perPage));
+  if (directoryState.page > totalPages) directoryState.page = totalPages;
+  const start = (directoryState.page - 1) * directoryState.perPage;
+  const pageRows = filtered.slice(start, start + directoryState.perPage);
+
+  const total = students.length;
+  const active = students.length;
+  const flagged = students.filter(s => categoryFor(predictPerformance(s).predicted) === "At Risk").length;
+
+  return `
+    <div class="page-head">
+      <div>
+        <h1>Students</h1>
+        <p>Manage, verify, and monitor all officially enrolled academic candidates across divisions.</p>
+      </div>
+      <div class="actions">
+        <button class="btn" data-action="export-students">⭳ Export CSV</button>
+        <a class="btn btn-primary" href="#/add">＋ Add Student</a>
+      </div>
+    </div>
+
+    <div class="grid grid-4">
+      ${statCard("Total Enrolled", total, "", "Sample records", "")}
+      ${statCard("Active Status", active, "", "Currently enrolled", "")}
+      ${statCard("Departments", DEPARTMENTS.length, "", "Programmes", "")}
+      ${statCard("Review Flagged", flagged, "", "At-risk by demo prediction", "")}
+    </div>
+
+    <div class="card mt">
+      <div class="filters">
+        <div class="field" style="flex:2;min-width:240px">
+          <label for="dirSearch">Search</label>
+          <input id="dirSearch" type="text" value="${esc(directoryState.query)}" placeholder="Search students by name, ID, or email...">
+        </div>
+        <div class="field">
+          <label for="dirDept">Department</label>
+          <select id="dirDept">${optionList(DEPARTMENTS, directoryState.dept, "All Departments")}</select>
+        </div>
+        <div class="field">
+          <label for="dirSem">Semester</label>
+          <select id="dirSem">${optionList(SEMESTERS, directoryState.semester, "All Semesters")}</select>
+        </div>
+        <div class="field">
+          <label for="dirCat">Performance category</label>
+          <select id="dirCat">${optionList(["Excellent", "Good", "Average", "At Risk"], directoryState.category, "All Categories")}</select>
+        </div>
+        <div class="field" style="flex:0;min-width:auto;justify-content:flex-end">
+          <label>&nbsp;</label>
+          <button class="btn" data-action="reset-filters">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt">
+      <div class="toolbar">
+        <strong>Showing ${filtered.length ? start + 1 : 0}–${Math.min(start + directoryState.perPage, filtered.length)} of ${filtered.length} students</strong>
+        <span class="sub-text" style="margin-left:auto">Default sort: Student ID</span>
+      </div>
+      ${filtered.length ? studentsTable(pageRows) : `<div class="empty">No students match these filters.</div>`}
+      ${filtered.length ? pagination(totalPages) : ""}
+    </div>
+  `;
+}
+
+function optionList(options, selected, placeholder) {
+  return `<option value="">${esc(placeholder)}</option>` +
+    options.map(o => `<option value="${esc(o)}" ${o === selected ? "selected" : ""}>${esc(o)}</option>`).join("");
+}
+
+function filterStudents() {
+  const q = directoryState.query.trim().toLowerCase();
+  return students.filter(s => {
+    const cat = categoryFor(predictPerformance(s).predicted);
+    const matchesQuery = !q || s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
+    const matchesDept = !directoryState.dept || s.dept === directoryState.dept;
+    const matchesSem = !directoryState.semester || s.semester === directoryState.semester;
+    const matchesCat = !directoryState.category || cat === directoryState.category;
+    return matchesQuery && matchesDept && matchesSem && matchesCat;
+  });
+}
+
+function studentsTable(list, opts = {}) {
+  return `
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            ${opts.compact ? "" : "<th></th>"}
+            <th>Student ID</th><th>Student Name</th><th>Department</th><th>Semester</th>
+            <th>Attendance</th><th>Predicted</th><th>Category</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${list.map((s, i) => {
+            const p = predictPerformance(s);
+            return `
+            <tr>
+              ${opts.compact ? "" : `<td><input type="checkbox" style="width:auto"></td>`}
+              <td><span class="id-link" data-action="open-profile" data-id="${esc(s.id)}">${esc(s.id)}</span></td>
+              <td><div class="person">${avatarHtml(s.name, i)}<div><div>${esc(s.name)}</div><div class="sub-text">${esc(s.email)}</div></div></div></td>
+              <td><span class="pill-tag">${esc(s.dept)}</span></td>
+              <td>${esc(s.semester)}</td>
+              <td>
+                <div class="bar-track" style="min-width:90px"><div class="bar-fill" style="width:${s.attendance}%"></div></div>
+                <div class="sub-text">${s.attendance}%</div>
+              </td>
+              <td>${p.predicted}</td>
+              <td>${categoryPill(p.category)}</td>
+              <td>
+                <button class="icon-btn" title="View" data-action="open-profile" data-id="${esc(s.id)}">◉</button>
+                <button class="icon-btn" title="Edit" data-action="edit-student" data-id="${esc(s.id)}">✎</button>
+                <button class="icon-btn" title="Delete" data-action="delete-student" data-id="${esc(s.id)}">🗑</button>
+              </td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function pagination(totalPages) {
+  let btns = "";
+  for (let i = 1; i <= totalPages; i++) {
+    btns += `<button class="page-btn ${i === directoryState.page ? "active" : ""}" data-action="page" data-page="${i}">${i}</button>`;
+  }
+  return `<div class="pagination">${btns}</div>`;
+}
+
+/* ---------- Add Student (contact form + academic section) ---------- */
+let addFormState = { submitting: false };
+
+function renderAdd() {
+  return `
+    <div class="page-head">
+      <div>
+        <h1>Add Student</h1>
+        <p>Enter the student's contact details. Academic information is entered in the section below.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-head">
+          <div><h2>Contact Details</h2><p>Saved to the Google Sheet "Responses" tab</p></div>
+        </div>
+        <form id="contactForm" novalidate>
+          <div class="form-grid">
+            <div class="field full">
+              <label for="cName">Name</label>
+              <input id="cName" type="text" placeholder="e.g. Arun Kumar" autocomplete="name">
+              <div class="error" id="cNameErr"></div>
+            </div>
+            <div class="field full">
+              <label for="cEmail">Email</label>
+              <input id="cEmail" type="email" placeholder="name@example.com" autocomplete="email">
+              <div class="error" id="cEmailErr"></div>
+            </div>
+            <div class="field full">
+              <label for="cPhone">Phone</label>
+              <input id="cPhone" type="tel" placeholder="+91 98765 43210" autocomplete="tel">
+              <div class="error" id="cPhoneErr"></div>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="contactSubmit">Submit Contact Details</button>
+            <button type="button" class="btn" data-action="clear-contact">Clear</button>
+          </div>
+          <div id="contactStatus"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div><h2>Academic Information</h2><p>Used for performance prediction (demo)</p></div>
+        </div>
+        <form id="academicForm" novalidate>
+          <div class="form-grid">
+            <div class="field">
+              <label for="aId">Student ID</label>
+              <input id="aId" type="text" placeholder="e.g. MCA2026050">
+              <div class="error" id="aIdErr"></div>
+            </div>
+            <div class="field">
+              <label for="aDept">Department</label>
+              <select id="aDept">${optionList(DEPARTMENTS, "", "Select department")}</select>
+              <div class="error" id="aDeptErr"></div>
+            </div>
+            <div class="field">
+              <label for="aSem">Semester</label>
+              <select id="aSem">${optionList(SEMESTERS, "", "Select semester")}</select>
+              <div class="error" id="aSemErr"></div>
+            </div>
+            <div class="field">
+              <label for="aInternal">Internal marks (0–100)</label>
+              <input id="aInternal" type="number" min="0" max="100" step="0.5">
+              <div class="error" id="aInternalErr"></div>
+            </div>
+            <div class="field">
+              <label for="aAssign">Assignment marks (0–100)</label>
+              <input id="aAssign" type="number" min="0" max="100" step="0.5">
+              <div class="error" id="aAssignErr"></div>
+            </div>
+            <div class="field">
+              <label for="aAtt">Attendance (%)</label>
+              <input id="aAtt" type="number" min="0" max="100" step="0.5">
+              <div class="error" id="aAttErr"></div>
+            </div>
+            <div class="field full">
+              <label for="aPrev">Previous academic performance (%)</label>
+              <input id="aPrev" type="number" min="0" max="100" step="0.5">
+              <div class="error" id="aPrevErr"></div>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save &amp; Predict</button>
+          </div>
+        </form>
+        <div id="predictionPreview"></div>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------- Attendance ---------- */
+function renderAttendance() {
+  const rows = students.map(s => {
+    const rec = attendanceRecords[s.id] || { present: 0, total: 0 };
+    const pct = rec.total ? Math.round((rec.present / rec.total) * 1000) / 10 : 0;
+    return { s, rec, pct };
+  });
+  const overall = average(rows.map(r => r.pct));
+  const below = rows.filter(r => r.pct < 75).length;
+
+  return `
+    <div class="page-head">
+      <div>
+        <h1>Attendance</h1>
+        <p>Record classes attended and calculate each student's attendance percentage.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-3">
+      ${statCard("Overall Attendance", overall + "%", "", "Across sample students", "")}
+      ${statCard("Below 75%", below, "", "Need follow-up", "")}
+      ${statCard("Classes Recorded", students.length * 60, "", "Demo total", "")}
+    </div>
+
+    <div class="grid grid-2 mt">
+      <div class="card">
+        <div class="card-head"><div><h2>Record Attendance</h2><p>Enter classes held and attended</p></div></div>
+        <form id="attendanceForm" novalidate>
+          <div class="form-grid">
+            <div class="field full">
+              <label for="attStudent">Student</label>
+              <select id="attStudent">${students.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.id)})</option>`).join("")}</select>
+            </div>
+            <div class="field">
+              <label for="attTotal">Classes held</label>
+              <input id="attTotal" type="number" min="1" step="1" value="60">
+              <div class="error" id="attTotalErr"></div>
+            </div>
+            <div class="field">
+              <label for="attPresent">Classes attended</label>
+              <input id="attPresent" type="number" min="0" step="1" value="50">
+              <div class="error" id="attPresentErr"></div>
+            </div>
+          </div>
+          <div class="form-actions"><button type="submit" class="btn btn-primary">Save Attendance</button></div>
+          <div id="attendanceStatus"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div><h2>Attendance Overview</h2><p>Percentage per student</p></div></div>
+        ${verticalBars(rows.slice(0, 8).map(r => ({ label: r.s.id.slice(0, 6), value: r.pct })))}
+      </div>
+    </div>
+
+    <div class="card mt">
+      <div class="card-head"><div><h2>Attendance Records</h2></div></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Student ID</th><th>Name</th><th>Attended</th><th>Held</th><th>Percentage</th><th>Status</th></tr></thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td>${esc(r.s.id)}</td>
+                <td>${esc(r.s.name)}</td>
+                <td>${r.rec.present}</td>
+                <td>${r.rec.total}</td>
+                <td><div class="bar-track"><div class="bar-fill" style="width:${r.pct}%"></div></div><div class="sub-text">${r.pct}%</div></td>
+                <td>${r.pct >= 75 ? `<span class="pill-status">Good</span>` : `<span class="pill-danger">Low</span>`}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------- Marks ---------- */
+function renderMarks() {
+  const allMarks = [];
+  Object.values(marks).forEach(subj => Object.values(subj).forEach(m => allMarks.push((m.internal + m.assignment + m.exam) / 3)));
+  const bands = [
+    { label: "0–39", min: 0, max: 39 }, { label: "40–54", min: 40, max: 54 },
+    { label: "55–69", min: 55, max: 69 }, { label: "70–84", min: 70, max: 84 },
+    { label: "85–100", min: 85, max: 100 }
+  ].map(b => ({ label: b.label, value: allMarks.filter(v => v >= b.min && v <= b.max).length }));
+
+  const bandMax = Math.max(...bands.map(b => b.value), 1);
+
+  return `
+    <div class="page-head">
+      <div>
+        <h1>Marks</h1>
+        <p>Record and display student marks for different subjects and assessments.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-head"><div><h2>Enter Marks</h2><p>Internal, assignment and exam marks (out of 100)</p></div></div>
+        <form id="marksForm" novalidate>
+          <div class="form-grid">
+            <div class="field full">
+              <label for="mStudent">Student</label>
+              <select id="mStudent">${students.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.id)})</option>`).join("")}</select>
+            </div>
+            <div class="field full">
+              <label for="mSubject">Subject</label>
+              <select id="mSubject">${SUBJECTS.map(x => `<option>${esc(x)}</option>`).join("")}</select>
+            </div>
+            <div class="field"><label for="mInt">Internal</label><input id="mInt" type="number" min="0" max="100"><div class="error" id="mIntErr"></div></div>
+            <div class="field"><label for="mAsg">Assignment</label><input id="mAsg" type="number" min="0" max="100"><div class="error" id="mAsgErr"></div></div>
+            <div class="field full"><label for="mExam">Exam</label><input id="mExam" type="number" min="0" max="100"><div class="error" id="mExamErr"></div></div>
+          </div>
+          <div class="form-actions"><button type="submit" class="btn btn-primary">Save Marks</button></div>
+          <div id="marksStatus"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div><h2>Marks Distribution</h2><p>Subject-level averages from entered marks</p></div></div>
+        ${allMarks.length ? `
+          ${bands.map(b => `
+            <div class="hbar-row">
+              <div class="hbar-meta"><span>${esc(b.label)}</span><span>${b.value}</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:${(b.value / bandMax) * 100}%"></div></div>
+            </div>`).join("")}`
+          : `<div class="empty">No marks recorded yet. Save marks on the left to see the distribution.</div>`}
+      </div>
+    </div>
+
+    <div class="card mt">
+      <div class="card-head"><div><h2>Recorded Marks</h2></div></div>
+      ${renderMarksTable()}
+    </div>
+  `;
+}
+
+function renderMarksTable() {
+  const rows = [];
+  Object.entries(marks).forEach(([id, subjects]) => {
+    const s = students.find(x => x.id === id);
+    Object.entries(subjects).forEach(([subj, m]) => {
+      rows.push(`<tr><td>${esc(id)}</td><td>${esc(s ? s.name : "")}</td><td>${esc(subj)}</td>
+        <td>${m.internal}</td><td>${m.assignment}</td><td>${m.exam}</td>
+        <td>${Math.round(((m.internal + m.assignment + m.exam) / 3) * 10) / 10}</td></tr>`);
+    });
+  });
+  if (!rows.length) return `<div class="empty">No marks saved yet.</div>`;
+  return `<div class="tbl-wrap"><table>
+    <thead><tr><th>Student ID</th><th>Name</th><th>Subject</th><th>Internal</th><th>Assignment</th><th>Exam</th><th>Average</th></tr></thead>
+    <tbody>${rows.join("")}</tbody></table></div>`;
+}
+
+/* ---------- Student Profile ---------- */
+let selectedId = null;
+
+function renderProfile() {
+  const s = students.find(x => x.id === selectedId) || students[0];
+  selectedId = s.id;
+  const idx = students.indexOf(s);
+  const p = predictPerformance(s);
+  const recs = recommendationsFor(s, p);
+  const subjMarks = marks[s.id] || {};
+
+  return `
+    <div class="page-head">
+      <div>
+        <h1>Student Profile</h1>
+        <p>Academic details, marks and the demo performance prediction.</p>
+      </div>
+      <div class="actions">
+        <button class="btn" data-action="export-profile" data-id="${esc(s.id)}">⭳ Export Report</button>
+        <button class="btn" data-action="edit-student" data-id="${esc(s.id)}">✎ Edit</button>
+        <a class="btn" href="#/students">‹ Back to Directory</a>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="profile-head" style="margin-bottom:18px">
+          ${avatarHtml(s.name, idx)}
+          <div>
+            <h2 style="font-size:18px">${esc(s.name)}</h2>
+            <div class="sub-text">${esc(s.id)} · ${esc(s.course)}</div>
+          </div>
+          <div style="margin-left:auto">${categoryPill(p.category)}</div>
+        </div>
+        <div class="kv">
+          <div>Student ID</div><div>${esc(s.id)}</div>
+          <div>Name</div><div>${esc(s.name)}</div>
+          <div>Email</div><div>${esc(s.email)}</div>
+          <div>Phone</div><div>${esc(s.phone)}</div>
+          <div>Department</div><div>${esc(s.dept)}</div>
+          <div>Course</div><div>${esc(s.course)}</div>
+          <div>Semester</div><div>${esc(s.semester)}</div>
+          <div>Internal marks</div><div>${s.internal}</div>
+          <div>Assignment marks</div><div>${s.assignment}</div>
+          <div>Attendance</div><div>${s.attendance}%</div>
+          <div>Previous performance</div><div>${s.previous}%</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div><h2>Performance Prediction</h2><p>Demo output, not a trained ML model</p></div></div>
+        <div class="demo-banner">Sample prediction. The categories depend on the thresholds set in this website (Excellent ≥ ${THRESHOLDS.excellent}, Good ≥ ${THRESHOLDS.good}, Average ≥ ${THRESHOLDS.average}, At Risk below ${THRESHOLDS.average}).</div>
+        <div class="predict-result">
+          <div>
+            <div class="sub-text">Predicted score</div>
+            <div class="score-big">${p.predicted}</div>
+          </div>
+          <div>
+            <div class="sub-text">Category</div>
+            <div>${categoryPill(p.category)}</div>
+          </div>
+          <div>
+            <div class="sub-text">Demo confidence</div>
+            <div><strong>${p.confidence}%</strong></div>
+          </div>
+        </div>
+        <h3 style="font-size:14px;margin:18px 0 8px">Recommendations</h3>
+        <ul class="rec-list">${recs.map(r => `<li>${esc(r)}</li>`).join("")}</ul>
+      </div>
+    </div>
+
+    <div class="card mt">
+      <div class="card-head"><div><h2>Subject Marks</h2><p>Marks entered on the Marks page</p></div></div>
+      ${Object.keys(subjMarks).length ? `
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Subject</th><th>Internal</th><th>Assignment</th><th>Exam</th><th>Average</th></tr></thead>
+          <tbody>${Object.entries(subjMarks).map(([subj, m]) => `
+            <tr><td>${esc(subj)}</td><td>${m.internal}</td><td>${m.assignment}</td><td>${m.exam}</td>
+            <td>${Math.round(((m.internal + m.assignment + m.exam) / 3) * 10) / 10}</td></tr>`).join("")}
+          </tbody></table></div>`
+        : `<div class="empty">No subject marks recorded yet for this student.</div>`}
+    </div>
+  `;
+}
+
+/* ---------- Settings ---------- */
+function renderSettings() {
+  return `
+    <div class="page-head"><div><h1>Settings</h1><p>Adjust performance thresholds used to categorise students.</p></div></div>
+    <div class="card" style="max-width:560px">
+      <div class="card-head"><div><h2>Performance Thresholds</h2><p>Changes apply after reloading the page</p></div></div>
+      <div class="form-grid">
+        <div class="field"><label>Excellent (≥)</label><input type="text" value="${THRESHOLDS.excellent}" disabled></div>
+        <div class="field"><label>Good (≥)</label><input type="text" value="${THRESHOLDS.good}" disabled></div>
+        <div class="field"><label>Average (≥)</label><input type="text" value="${THRESHOLDS.average}" disabled></div>
+        <div class="field"><label>At Risk</label><input type="text" value="Below ${THRESHOLDS.average}" disabled></div>
+      </div>
+      <p class="sub-text" style="margin-top:12px">To change these values, edit THRESHOLDS in the script section of index.html.</p>
+    </div>
+  `;
+}
+
+/* ==============================================================
+   8. ROUTING AND RENDERING
+   ============================================================== */
+
+function currentRoute() {
+  const hash = location.hash.replace(/^#\/?/, "");
+  const [route, id] = hash.split("/");
+  if (route === "profile" && id) selectedId = id;
+  return PAGES[route] ? route : "dashboard";
+}
+
+function render() {
+  const route = currentRoute();
+  const content = document.getElementById("content");
+
+  const renderers = {
+    dashboard: renderDashboard, students: renderStudents, add: renderAdd,
+    attendance: renderAttendance, marks: renderMarks, profile: renderProfile, settings: renderSettings
+  };
+  content.innerHTML = renderers[route]();
+
+  document.querySelectorAll(".nav a").forEach(a => {
+    a.classList.toggle("active", a.dataset.route === route);
+  });
+  document.getElementById("crumb").textContent = PAGES[route].crumb;
+  document.getElementById("navStudentCount").textContent = students.length;
+
+  attachPageHandlers(route);
+  window.scrollTo(0, 0);
+}
+
+/* Event handlers that depend on a page's content are attached after each render. */
+function attachPageHandlers(route) {
+  if (route === "students") {
+    const bind = (id, key) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener(el.tagName === "INPUT" ? "input" : "change", e => {
+        directoryState[key] = e.target.value;
+        directoryState.page = 1;
+        render();
+        const again = document.getElementById(id);
+        if (again) { again.focus(); if (again.setSelectionRange) again.setSelectionRange(again.value.length, again.value.length); }
+      });
+    };
+    bind("dirSearch", "query");
+    bind("dirDept", "dept");
+    bind("dirSem", "semester");
+    bind("dirCat", "category");
+  }
+
+  if (route === "add") {
+    document.getElementById("contactForm").addEventListener("submit", handleContactSubmit);
+    document.getElementById("academicForm").addEventListener("submit", handleAcademicSubmit);
+  }
+
+  if (route === "attendance") {
+    document.getElementById("attendanceForm").addEventListener("submit", handleAttendanceSubmit);
+  }
+
+  if (route === "marks") {
+    document.getElementById("marksForm").addEventListener("submit", handleMarksSubmit);
+  }
+}
+
+/* ==============================================================
+   9. FORM HANDLERS
+   ============================================================== */
+
+function setError(id, message) {
+  const el = document.getElementById(id + "Err") || document.getElementById(id + "err");
+  if (el) el.textContent = message || "";
+  const input = document.getElementById(id);
+  if (input) input.classList.toggle("invalid", !!message);
+}
+
+function setStatus(elementId, type, html) {
+  const el = document.getElementById(elementId);
+  if (el) el.innerHTML = `<div class="status-msg ${type}">${html}</div>`;
+}
+
+/* Contact form: validates name, email, phone, then sends to Google Sheets. */
+function handleContactSubmit(e) {
+  e.preventDefault();
+  if (addFormState.submitting) return;
+
+  const name = document.getElementById("cName").value;
+  const email = document.getElementById("cEmail").value;
+  const phone = document.getElementById("cPhone").value;
+
+  const errors = validateContactFields(name, email, phone);
+  setError("cName", errors.name);
+  setError("cEmail", errors.email);
+  setError("cPhone", errors.phone);
+  if (Object.keys(errors).length) {
+    setStatus("contactStatus", "err", "Please correct the highlighted fields before submitting.");
+    return;
+  }
+
+  const btn = document.getElementById("contactSubmit");
+  addFormState.submitting = true;
+  btn.disabled = true;
+  btn.textContent = "Submitting...";
+  setStatus("contactStatus", "info", "Sending details to the Google Sheet...");
+
+  submitContactToSheet(name.trim(), email.trim(), phone.trim(), ok => {
+    addFormState.submitting = false;
+    btn.disabled = false;
+    btn.textContent = "Submit Contact Details";
+
+    if (ok) {
+      // Honest wording: no-cors means the browser cannot read the Apps Script response.
+      setStatus("contactStatus", "ok",
+        "Submitted. The details were sent to the Google Sheet. The browser cannot confirm the save, so please check the Responses tab.");
+      document.getElementById("contactForm").reset();
+    } else {
+      setStatus("contactStatus", "err", "Submission failed. Check your internet connection and try again.");
+    }
+  });
+}
+
+/* Academic form: validates and shows a demo prediction (not saved to Google Sheets). */
+function handleAcademicSubmit(e) {
+  e.preventDefault();
+
+  const fields = {
+    aId: document.getElementById("aId").value.trim(),
+    aDept: document.getElementById("aDept").value,
+    aSem: document.getElementById("aSem").value,
+    aInternal: document.getElementById("aInternal").value,
+    aAssign: document.getElementById("aAssign").value,
+    aAtt: document.getElementById("aAtt").value,
+    aPrev: document.getElementById("aPrev").value
+  };
+
+  const numericRange = (v) => v !== "" && Number(v) >= 0 && Number(v) <= 100;
+  const errors = {
+    aId: fields.aId ? "" : "Student ID is required.",
+    aDept: fields.aDept ? "" : "Select a department.",
+    aSem: fields.aSem ? "" : "Select a semester.",
+    aInternal: numericRange(fields.aInternal) ? "" : "Enter a number from 0 to 100.",
+    aAssign: numericRange(fields.aAssign) ? "" : "Enter a number from 0 to 100.",
+    aAtt: numericRange(fields.aAtt) ? "" : "Enter a number from 0 to 100.",
+    aPrev: numericRange(fields.aPrev) ? "" : "Enter a number from 0 to 100."
+  };
+  Object.keys(errors).forEach(k => setError(k, errors[k]));
+  if (Object.values(errors).some(Boolean)) return;
+
+  const temp = {
+    id: fields.aId, name: "New student", email: "", phone: "", dept: fields.aDept,
+    course: "", semester: fields.aSem,
+    internal: Number(fields.aInternal), assignment: Number(fields.aAssign),
+    attendance: Number(fields.aAtt), previous: Number(fields.aPrev)
+  };
+  const p = predictPerformance(temp);
+
+  document.getElementById("predictionPreview").innerHTML = `
+    <div class="card" style="margin-top:16px;box-shadow:none">
+      <div class="demo-banner">Sample prediction. This is not a trained ML model and is not saved to the sheet.</div>
+      <div class="predict-result">
+        <div><div class="sub-text">Predicted score</div><div class="score-big">${p.predicted}</div></div>
+        <div><div class="sub-text">Category</div>${categoryPill(p.category)}</div>
+        <div><div class="sub-text">Demo confidence</div><strong>${p.confidence}%</strong></div>
+      </div>
+      <ul class="rec-list" style="margin-top:12px">${recommendationsFor(temp, p).map(r => `<li>${esc(r)}</li>`).join("")}</ul>
+    </div>`;
+}
+
+function handleAttendanceSubmit(e) {
+  e.preventDefault();
+  const id = document.getElementById("attStudent").value;
+  const total = Number(document.getElementById("attTotal").value);
+  const present = Number(document.getElementById("attPresent").value);
+
+  const errTotal = !(total >= 1) ? "Enter at least 1 class." : "";
+  const errPresent = (present < 0 || present > total) ? "Attended classes must be between 0 and classes held." : "";
+  document.getElementById("attTotalErr").textContent = errTotal;
+  document.getElementById("attPresentErr").textContent = errPresent;
+  if (errTotal || errPresent) return;
+
+  attendanceRecords[id] = { present, total };
+  const s = students.find(x => x.id === id);
+  s.attendance = Math.round((present / total) * 1000) / 10;
+  setStatus("attendanceStatus", "ok", `Saved. ${esc(s.name)} now has ${s.attendance}% attendance.`);
+  setTimeout(render, 800);
+}
+
+function handleMarksSubmit(e) {
+  e.preventDefault();
+  const id = document.getElementById("mStudent").value;
+  const subject = document.getElementById("mSubject").value;
+  const vals = {
+    internal: Number(document.getElementById("mInt").value),
+    assignment: Number(document.getElementById("mAsg").value),
+    exam: Number(document.getElementById("mExam").value)
+  };
+  const raw = {
+    internal: document.getElementById("mInt").value,
+    assignment: document.getElementById("mAsg").value,
+    exam: document.getElementById("mExam").value
+  };
+  const ok = (v, r) => r !== "" && v >= 0 && v <= 100;
+  const errs = {
+    mInt: ok(vals.internal, raw.internal) ? "" : "Enter 0 to 100.",
+    mAsg: ok(vals.assignment, raw.assignment) ? "" : "Enter 0 to 100.",
+    mExam: ok(vals.exam, raw.exam) ? "" : "Enter 0 to 100."
+  };
+  Object.keys(errs).forEach(k => setError(k, errs[k]));
+  if (Object.values(errs).some(Boolean)) return;
+
+  marks[id] = marks[id] || {};
+  marks[id][subject] = vals;
+  const s = students.find(x => x.id === id);
+  setStatus("marksStatus", "ok", `Saved ${esc(subject)} marks for ${esc(s.name)}.`);
+  setTimeout(render, 800);
+}
+
+/* ==============================================================
+   10. ACTIONS (buttons, export, edit, delete)
+   ============================================================== */
+
+function openModal(title, body, buttons) {
+  document.getElementById("modalRoot").innerHTML = `
+    <div class="modal-backdrop" data-action="close-modal">
+      <div class="modal" role="dialog" aria-modal="true">
+        <h3>${esc(title)}</h3>
+        <p>${body}</p>
+        <div class="form-actions" style="margin-top:0">${buttons}</div>
+      </div>
+    </div>`;
+}
+function closeModal() { document.getElementById("modalRoot").innerHTML = ""; }
+
+function downloadCsv(filename, rows) {
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportStudents() {
+  const rows = [["Student ID", "Name", "Email", "Phone", "Department", "Semester", "Internal", "Assignment", "Attendance", "Predicted", "Category"]];
+  filterStudents().forEach(s => {
+    const p = predictPerformance(s);
+    rows.push([s.id, s.name, s.email, s.phone, s.dept, s.semester, s.internal, s.assignment, s.attendance, p.predicted, p.category]);
+  });
+  downloadCsv("student-performance-report.csv", rows);
+}
+
+function exportProfile(id) {
+  const s = students.find(x => x.id === id);
+  const p = predictPerformance(s);
+  downloadCsv(`report-${s.id}.csv`, [
+    ["Field", "Value"],
+    ["Student ID", s.id], ["Name", s.name], ["Department", s.dept], ["Semester", s.semester],
+    ["Internal", s.internal], ["Assignment", s.assignment], ["Attendance %", s.attendance],
+    ["Previous %", s.previous], ["Predicted score (demo)", p.predicted], ["Category (demo)", p.category]
+  ]);
+}
+
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-action]");
+  if (!el) return;
+  const action = el.dataset.action;
+  const id = el.dataset.id;
+
+  if (action === "close-modal" && e.target === el) closeModal();
+
+  if (action === "open-profile") location.hash = "#/profile/" + id;
+
+  if (action === "reset-filters") {
+    directoryState = { query: "", dept: "", semester: "", category: "", page: 1, perPage: 6 };
+    render();
+  }
+
+  if (action === "page") {
+    directoryState.page = Number(el.dataset.page);
+    render();
+  }
+
+  if (action === "export-students") exportStudents();
+  if (action === "export-report") exportStudents();
+  if (action === "export-profile") exportProfile(id);
+
+  if (action === "clear-contact") {
+    document.getElementById("contactForm").reset();
+    ["cName", "cEmail", "cPhone"].forEach(f => setError(f, ""));
+    document.getElementById("contactStatus").innerHTML = "";
+  }
+
+  if (action === "edit-student") {
+    const s = students.find(x => x.id === id);
+    openModal("Edit Student", `Editing ${esc(s.name)} (${esc(s.id)}) is shown as a demo. Use the Add Student page for new records.`,
+      `<button class="btn btn-primary" data-action="close-modal-btn">OK</button>`);
+  }
+
+  if (action === "delete-student") {
+    const s = students.find(x => x.id === id);
+    openModal("Delete Student?", `This removes ${esc(s.name)} (${esc(s.id)}) from this demo view only.`,
+      `<button class="btn" data-action="close-modal-btn">Cancel</button>
+       <button class="btn btn-primary" data-action="confirm-delete" data-id="${esc(id)}">Delete</button>`);
+  }
+
+  if (action === "close-modal-btn") closeModal();
+
+  if (action === "confirm-delete") {
+    students = students.filter(x => x.id !== id);
+    closeModal();
+    render();
+  }
+});
+
+/* ==============================================================
+   11. LOGIN, LOGOUT AND STARTUP
+   ============================================================== */
+
+function showApp() {
+  document.getElementById("loginView").classList.add("hidden");
+  document.getElementById("appView").classList.remove("hidden");
+  if (!location.hash || location.hash.startsWith("#login")) location.hash = "#/dashboard";
+  render();
+}
+
+function showLogin() {
+  document.getElementById("appView").classList.add("hidden");
+  document.getElementById("loginView").classList.remove("hidden");
+}
+
+document.getElementById("loginForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const user = document.getElementById("loginUser").value.trim();
+  const pass = document.getElementById("loginPass").value;
+  setError("loginUser", user ? "" : "Enter your username or email.");
+  setError("loginPass", pass ? "" : "Enter your password.");
+  if (user && pass) {
+    sessionStorage.setItem("demoSignedIn", "1");
+    showApp();
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  sessionStorage.removeItem("demoSignedIn");
+  location.hash = "";
+  showLogin();
+});
+
+document.getElementById("globalSearch").addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    directoryState.query = e.target.value;
+    directoryState.page = 1;
+    location.hash = "#/students";
+    render();
+  }
+});
+
+window.addEventListener("hashchange", () => {
+  if (sessionStorage.getItem("demoSignedIn")) render();
+});
+
+// Start: show the app if already signed in during this session, otherwise the login page.
+if (sessionStorage.getItem("demoSignedIn")) {
+  showApp();
+} else {
+  showLogin();
+}
+</script>
+</body>
+</html>
